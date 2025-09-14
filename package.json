@@ -8,7 +8,7 @@
     "dev": "nodemon server.js"
   },
   "keywords": ["web-crawler", "node.js", "express", "puppeteer", "scraping", "website-analysis"],
-  "author": "yukiuota <your.email@example.com>",
+  "author": "yukiuota",
   "license": "ISC",
   "repository": {
     "type": "git",
