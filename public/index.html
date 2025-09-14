@@ -1,0 +1,613 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ページリスト生成 - Webクローラー</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f5f5f5;
+            color: #333;
+            line-height: 1.6;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        header {
+            background: #667eea;
+            color: white;
+            text-align: center;
+            padding: 2rem;
+            border-radius: 10px;
+            margin-bottom: 2rem;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+
+        h1 {
+            font-size: 2.5rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .subtitle {
+            font-size: 1.1rem;
+            opacity: 0.9;
+        }
+
+        .form-section {
+            background: white;
+            padding: 2rem;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            margin-bottom: 2rem;
+        }
+
+        .form-group {
+            margin-bottom: 1.5rem;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 0.5rem;
+            font-weight: bold;
+            color: #555;
+        }
+
+        input[type="url"], input[type="number"] {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            font-size: 1rem;
+            transition: border-color 0.3s ease;
+        }
+
+        input[type="url"]:focus, input[type="number"]:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+
+        .button-group {
+            display: flex;
+            gap: 1rem;
+            align-items: center;
+        }
+
+        button {
+            padding: 12px 24px;
+            border: none;
+            border-radius: 8px;
+            font-size: 1rem;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+
+        .btn-primary:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+        }
+
+        .btn-secondary {
+            background: #6c757d;
+            color: white;
+        }
+
+        .btn-secondary:hover:not(:disabled) {
+            background: #5a6268;
+            transform: translateY(-2px);
+        }
+
+        button:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none !important;
+        }
+
+        .status-section {
+            background: white;
+            padding: 1.5rem;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            margin-bottom: 2rem;
+        }
+
+        .status-bar {
+            background: #e9ecef;
+            border-radius: 10px;
+            overflow: hidden;
+            height: 20px;
+            margin: 1rem 0;
+        }
+
+        .status-progress {
+            background: linear-gradient(90deg, #28a745, #20c997);
+            height: 100%;
+            width: 0%;
+            transition: width 0.3s ease;
+        }
+
+        .results-section {
+            background: white;
+            padding: 2rem;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+
+        .results-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1.5rem;
+            padding-bottom: 1rem;
+            border-bottom: 2px solid #eee;
+        }
+
+        .results-count {
+            color: #667eea;
+            font-weight: bold;
+            font-size: 1.1rem;
+        }
+
+        .export-btn {
+            background: #28a745;
+            color: white;
+            padding: 8px 16px;
+            font-size: 0.9rem;
+        }
+
+        .export-btn:hover {
+            background: #218838;
+        }
+
+        .table-container {
+            overflow-x: auto;
+            border-radius: 8px;
+            border: 1px solid #ddd;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            background: white;
+        }
+
+        th, td {
+            padding: 12px;
+            text-align: left;
+            border-bottom: 1px solid #eee;
+        }
+
+        th {
+            background: #f8f9fa;
+            font-weight: bold;
+            color: #555;
+            position: sticky;
+            top: 0;
+        }
+
+        tr:hover {
+            background: #f8f9fa;
+        }
+
+        .url-cell {
+            max-width: 300px;
+            word-break: break-all;
+        }
+
+        .title-cell {
+            max-width: 250px;
+            font-weight: 500;
+        }
+
+        .description-cell {
+            max-width: 350px;
+            color: #666;
+        }
+
+        .url-cell, .title-cell, .description-cell {
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .url-link {
+            color: #667eea;
+            text-decoration: none;
+        }
+
+        .url-link:hover {
+            text-decoration: underline;
+        }
+
+        .loading {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #667eea;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .hidden {
+            display: none;
+        }
+
+        .status-message {
+            margin: 0.5rem 0;
+            padding: 0.8rem;
+            border-radius: 5px;
+            font-weight: 500;
+        }
+
+        .status-running {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+
+        .status-completed {
+            background: #d1ecf1;
+            color: #0c5460;
+            border: 1px solid #bee5eb;
+        }
+
+        .status-error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                padding: 10px;
+            }
+            
+            h1 {
+                font-size: 2rem;
+            }
+            
+            .button-group {
+                flex-direction: column;
+            }
+            
+            button {
+                width: 100%;
+            }
+            
+            .results-header {
+                flex-direction: column;
+                gap: 1rem;
+                align-items: stretch;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>ページリスト生成</h1>
+            <p class="subtitle">指定したWebサイトの全ページを自動的にクロールし、タイトルとディスクリプションを取得します</p>
+        </header>
+
+        <div class="form-section">
+            <form id="crawlForm">
+                <div class="form-group">
+                    <label for="urlInput">クロール開始URL:</label>
+                    <input type="url" id="urlInput" placeholder="https://example.com" required>
+                </div>
+                <div class="form-group">
+                    <label for="maxPagesInput">最大ページ数 (最大2000):</label>
+                    <input type="number" id="maxPagesInput" min="1" max="2000" value="50">
+                </div>
+                <div class="button-group">
+                    <button type="submit" class="btn-primary" id="startBtn">
+                        <span id="startBtnText">クロール開始</span>
+                        <span id="loadingSpinner" class="loading hidden"></span>
+                    </button>
+                    <button type="button" class="btn-secondary hidden" id="stopBtn">クロール停止</button>
+                </div>
+            </form>
+        </div>
+
+        <div class="status-section" id="statusSection">
+            <h3>ステータス</h3>
+            <div id="statusMessage" class="status-message">クロール待機中</div>
+            <div class="status-bar">
+                <div class="status-progress" id="progressBar"></div>
+            </div>
+            <div id="progressText">0 ページ処理済み</div>
+        </div>
+
+        <div class="results-section">
+            <div class="results-header">
+                <div>
+                    <h3>クロール結果</h3>
+                    <span class="results-count" id="resultsCount">0 件のページが見つかりました</span>
+                </div>
+                <button class="export-btn hidden" id="exportBtn">CSVエクスポート</button>
+            </div>
+            
+            <div class="table-container">
+                <table id="resultsTable">
+                    <thead>
+                        <tr>
+                            <th>No.</th>
+                            <th>ページURL</th>
+                            <th>ページタイトル</th>
+                            <th>ページディスクリプション</th>
+                        </tr>
+                    </thead>
+                    <tbody id="resultsBody">
+                        <tr>
+                            <td colspan="4" style="text-align: center; color: #999; padding: 2rem;">
+                                まだクロール結果がありません
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let isPolling = false;
+        let pollInterval;
+
+        // DOM要素
+        const form = document.getElementById('crawlForm');
+        const urlInput = document.getElementById('urlInput');
+        const maxPagesInput = document.getElementById('maxPagesInput');
+        const startBtn = document.getElementById('startBtn');
+        const startBtnText = document.getElementById('startBtnText');
+        const loadingSpinner = document.getElementById('loadingSpinner');
+        const stopBtn = document.getElementById('stopBtn');
+        const statusMessage = document.getElementById('statusMessage');
+        const progressBar = document.getElementById('progressBar');
+        const progressText = document.getElementById('progressText');
+        const resultsCount = document.getElementById('resultsCount');
+        const resultsBody = document.getElementById('resultsBody');
+        const exportBtn = document.getElementById('exportBtn');
+
+        // フォーム送信
+        form.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const url = urlInput.value.trim();
+            const maxPages = parseInt(maxPagesInput.value) || 50;
+
+            if (!url) {
+                alert('URLを入力してください');
+                return;
+            }
+
+            try {
+                startCrawling();
+                
+                const response = await fetch('/api/crawl', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ url, maxPages })
+                });
+
+                const result = await response.json();
+
+                if (!response.ok) {
+                    throw new Error(result.error || 'クロールの開始に失敗しました');
+                }
+
+                updateStatus('クロールを開始しました...', 'running');
+                startPolling();
+
+            } catch (error) {
+                console.error('Error:', error);
+                updateStatus(`エラー: ${error.message}`, 'error');
+                stopCrawling();
+            }
+        });
+
+        // クロール停止
+        stopBtn.addEventListener('click', async () => {
+            try {
+                const response = await fetch('/api/stop', {
+                    method: 'POST'
+                });
+                const result = await response.json();
+                updateStatus(result.message, 'completed');
+                stopPolling();
+                stopCrawling();
+            } catch (error) {
+                console.error('Error stopping crawl:', error);
+            }
+        });
+
+        // CSVエクスポート
+        exportBtn.addEventListener('click', () => {
+            exportToCSV();
+        });
+
+        // クロール開始時のUI更新
+        function startCrawling() {
+            startBtn.disabled = true;
+            startBtnText.textContent = 'クロール中...';
+            loadingSpinner.classList.remove('hidden');
+            stopBtn.classList.remove('hidden');
+            urlInput.disabled = true;
+            maxPagesInput.disabled = true;
+        }
+
+        // クロール停止時のUI更新
+        function stopCrawling() {
+            startBtn.disabled = false;
+            startBtnText.textContent = 'クロール開始';
+            loadingSpinner.classList.add('hidden');
+            stopBtn.classList.add('hidden');
+            urlInput.disabled = false;
+            maxPagesInput.disabled = false;
+        }
+
+        // ステータス更新
+        function updateStatus(message, type = '') {
+            statusMessage.textContent = message;
+            statusMessage.className = 'status-message';
+            if (type) {
+                statusMessage.classList.add(`status-${type}`);
+            }
+        }
+
+        // ポーリング開始
+        function startPolling() {
+            if (isPolling) return;
+            
+            isPolling = true;
+            pollInterval = setInterval(async () => {
+                try {
+                    await updateResults();
+                    const response = await fetch('/api/status');
+                    const status = await response.json();
+                    
+                    progressText.textContent = `${status.progress} ページ処理済み`;
+                    
+                    if (!status.isRunning) {
+                        updateStatus('クロール完了', 'completed');
+                        stopPolling();
+                        stopCrawling();
+                    }
+                } catch (error) {
+                    console.error('Polling error:', error);
+                }
+            }, 2000);
+        }
+
+        // ポーリング停止
+        function stopPolling() {
+            if (pollInterval) {
+                clearInterval(pollInterval);
+                pollInterval = null;
+            }
+            isPolling = false;
+        }
+
+        // 結果更新
+        async function updateResults() {
+            try {
+                const response = await fetch('/api/results');
+                const data = await response.json();
+                
+                displayResults(data.pages);
+                resultsCount.textContent = `${data.totalCount} 件のページが見つかりました`;
+                
+                if (data.totalCount > 0) {
+                    exportBtn.classList.remove('hidden');
+                }
+                
+            } catch (error) {
+                console.error('Error updating results:', error);
+            }
+        }
+
+        // 結果表示
+        function displayResults(pages) {
+            if (!pages || pages.length === 0) {
+                resultsBody.innerHTML = `
+                    <tr>
+                        <td colspan="4" style="text-align: center; color: #999; padding: 2rem;">
+                            まだクロール結果がありません
+                        </td>
+                    </tr>
+                `;
+                return;
+            }
+
+            resultsBody.innerHTML = pages.map((page, index) => `
+                <tr>
+                    <td>${index + 1}</td>
+                    <td class="url-cell">
+                        <a href="${escapeHtml(page.url)}" target="_blank" class="url-link">
+                            ${escapeHtml(page.url)}
+                        </a>
+                    </td>
+                    <td class="title-cell" title="${escapeHtml(page.title)}">
+                        ${escapeHtml(page.title)}
+                    </td>
+                    <td class="description-cell" title="${escapeHtml(page.description)}">
+                        ${escapeHtml(page.description)}
+                    </td>
+                </tr>
+            `).join('');
+        }
+
+        // HTMLエスケープ
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        // CSVエクスポート
+        function exportToCSV() {
+            fetch('/api/results')
+                .then(response => response.json())
+                .then(data => {
+                    const pages = data.pages;
+                    if (!pages || pages.length === 0) {
+                        alert('エクスポートするデータがありません');
+                        return;
+                    }
+
+                    const csvContent = [
+                        ['No.', 'ページURL', 'ページタイトル', 'ページディスクリプション'],
+                        ...pages.map((page, index) => [
+                            index + 1,
+                            page.url,
+                            page.title,
+                            page.description
+                        ])
+                    ].map(row => row.map(field => `"${String(field).replace(/"/g, '""')}"`).join(',')).join('\n');
+
+                    const blob = new Blob(['\uFEFF' + csvContent], { type: 'text/csv;charset=utf-8;' });
+                    const link = document.createElement('a');
+                    const url = URL.createObjectURL(blob);
+                    link.setAttribute('href', url);
+                    link.setAttribute('download', `page_list_${new Date().toISOString().slice(0, 10)}.csv`);
+                    link.style.visibility = 'hidden';
+                    document.body.appendChild(link);
+                    link.click();
+                    document.body.removeChild(link);
+                })
+                .catch(error => {
+                    console.error('Export error:', error);
+                    alert('エクスポートに失敗しました');
+                });
+        }
+
+        // ページロード時に結果を更新
+        window.addEventListener('load', () => {
+            updateResults();
+        });
+    </script>
+</body>
+</html>
